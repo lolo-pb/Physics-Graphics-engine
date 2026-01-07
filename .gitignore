@@ -1,0 +1,37 @@
+# build outputs
+/out/
+/build/
+/bin/
+/lib/
+
+# CMake/VS
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+*.user
+*.sln
+*.vcxproj*
+*.filters
+.vs/
+
+# Ninja
+.ninja_log
+.ninja_deps
+
+# Vcpkg artifacts (DON'T COMMIT)
+/vcpkg_installed/
+vcpkg_installed/
+vcpkg/
+
+# Binaries / debug
+*.exe
+*.dll
+*.lib
+*.pdb
+*.ilk
+*.obj
+*.pch
+
+# OS junk
+.DS_Store
+Thumbs.db
