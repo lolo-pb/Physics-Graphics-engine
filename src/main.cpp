@@ -3,12 +3,19 @@
 
 #include <iostream>
 #include <vector>
+#include <string.h>
+
+const uint32_t WIN_HEIGHT = 720;
+const uint32_t WIN_WIDTH = 1280;
+const char* WIN_NAME = "engine-window";
 
 int main() {
+// Windowing ( GLFW ) "duh..."
   if (!glfwInit()) { std::cerr << "GLFW init failed\n"; return 1; }
 
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  GLFWwindow* win = glfwCreateWindow(1280, 720, "engine", nullptr, nullptr);
+  glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+  GLFWwindow* win = glfwCreateWindow(WIN_WIDTH, WIN_HEIGHT, WIN_NAME, nullptr, nullptr);
   if (!win) { std::cerr << "Window create failed\n"; glfwTerminate(); return 1; }
 
   uint32_t extCount = 0;
@@ -36,8 +43,13 @@ int main() {
   }
 
   std::cout << "Vulkan instance OK\n";
-  while (!glfwWindowShouldClose(win)) glfwPollEvents();
 
+// Main loop
+  while (!glfwWindowShouldClose(win)) { 
+      glfwPollEvents(); 
+  }
+
+// Cleanup, exit
   vkDestroyInstance(instance, nullptr);
   glfwDestroyWindow(win);
   glfwTerminate();
