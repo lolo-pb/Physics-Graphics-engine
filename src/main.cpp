@@ -9,25 +9,29 @@ const uint32_t WIN_HEIGHT = 720;
 const uint32_t WIN_WIDTH = 1280;
 const char* WIN_NAME = "engine-window";
 
-int main() {
-// Windowing ( GLFW ) "duh..."
-  if (!glfwInit()) { std::cerr << "GLFW init failed\n"; return 1; }
+void initWindow(GLFWwindow* window);
+void cleanup(VkInstance instance, GLFWwindow* window);
 
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-  GLFWwindow* win = glfwCreateWindow(WIN_WIDTH, WIN_HEIGHT, WIN_NAME, nullptr, nullptr);
-  if (!win) { std::cerr << "Window create failed\n"; glfwTerminate(); return 1; }
+int main() {
+
+// Window setup
+   GLFWwindow* win;
+   initWindow(win);
+
+
 
   uint32_t extCount = 0;
   const char** ext = glfwGetRequiredInstanceExtensions(&extCount);
   std::vector<const char*> exts(ext, ext + extCount);
 
-  VkApplicationInfo app{ VK_STRUCTURE_TYPE_APPLICATION_INFO };
-  app.pApplicationName = "engine";
-  app.applicationVersion = VK_MAKE_VERSION(0,1,0);
-  app.pEngineName = "engine";
-  app.engineVersion = VK_MAKE_VERSION(0,1,0);
-  app.apiVersion = VK_API_VERSION_1_2;
+  VkApplicationInfo app = {
+      .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+      .pApplicationName = "engine",
+      .applicationVersion = VK_MAKE_VERSION(0,1,0),
+      .pEngineName = "engine",
+      .engineVersion = VK_MAKE_VERSION(0,1,0),
+      .apiVersion = VK_API_VERSION_1_2,
+  };
 
   VkInstanceCreateInfo ci{ VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
   ci.pApplicationInfo = &app;
@@ -49,9 +53,43 @@ int main() {
       glfwPollEvents(); 
   }
 
-// Cleanup, exit
-  vkDestroyInstance(instance, nullptr);
-  glfwDestroyWindow(win);
-  glfwTerminate();
+// Cleanup / Exit
+  cleanup(instance, win);
+
   return 0;
+}
+
+
+void initWindow(GLFWwindow* window) {
+    if (!glfwInit()) { std::cerr << "GLFW init failed\n"; return 1; }
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    window = glfwCreateWindow(WIN_WIDTH, WIN_HEIGHT, WIN_NAME, nullptr, nullptr);
+    if (!window) { std::cerr << "Window create failed\n"; glfwTerminate(); return 1; }
+}
+
+void initVulkan() {
+    creayeInstance();
+}
+
+void createInstance() {
+    VkApplicationInfo appInfo = { 
+        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .pApplicationName = "Hello Triangle",
+        .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
+        .pEngineName = "No Engine",
+        .engineVersion = VK_MAKE_VERSION(1, 0, 0),
+        .apiVersion = vkApiVersion14 
+    };
+}
+
+void cleanup(VkInstance instance, GLFWwindow* window) {
+    vkDestroyInstance(instance, nullptr);
+    glfwDestroyWindow(window);
+    glfwTerminate();
+}
+
+void initVulkan() {
+    
 }
