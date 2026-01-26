@@ -86,6 +86,7 @@ private:
         createLogicalDevice();
         createSwapChain();
         createImageViews();
+        createGraphicsPipeline();
     
         printf("Vulkan initiated.\n");
     }
@@ -423,6 +424,12 @@ private:
 
     }
 
+
+    // Graphycs, i think 
+
+    void createGraphicsPipeline() {
+        
+    }
 
 /// Main Loop ///
     void mainLoop() {
