@@ -472,6 +472,7 @@ private:
 
     // file helper function // todo : check if this goes here 
     static std::vector<char> readFile(const std::string& filename) {
+        printf("Reading file: %s", filename.c_str());
         std::ifstream file(filename, std::ios::ate | std::ios::binary);
     
         if (!file.is_open()) {
@@ -486,6 +487,7 @@ private:
     
         file.close();
     
+        printf(" | Loaded :)\n");
         return buffer;
     }
 
