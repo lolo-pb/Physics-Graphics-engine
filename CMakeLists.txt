@@ -9,6 +9,9 @@ find_package(glfw3 CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 
 add_executable(engine src/main.cpp )
+
+target_include_directories(engine PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/myLibs")
+
 target_link_libraries(engine PRIVATE Vulkan::Vulkan glfw glm::glm)
 
 if (MSVC)
