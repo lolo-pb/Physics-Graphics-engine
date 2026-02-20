@@ -167,6 +167,8 @@ private:
     VkImage textureImage = nullptr;
     VkDeviceMemory textureImageMemory = nullptr;
 
+    VkImageView textureImageView = nullptr;
+    VkSampler textureSampler = nullptr;
 
 /// Init window ///
     void initWindow() {
@@ -205,6 +207,8 @@ private:
         createCommandPool();
 
         createTextureImage();
+        createTextureImageView();
+        createTextureSampler();
 
         createVertexBuffer();
         createIndexBuffer();
@@ -302,7 +306,10 @@ private:
             swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
         }
 
-        return indices.isComplete() && extensionsSupported && swapChainAdequate;
+        VkPhysicalDeviceFeatures supportedFeatures;
+        vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
+
+        return indices.isComplete() && extensionsSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
     }
 
     bool checkDeviceExtensionSupport(VkPhysicalDevice device) {
@@ -397,7 +404,8 @@ private:
             queueCreateInfos.push_back(queueCreateInfo);
         }
 
-        VkPhysicalDeviceFeatures deviceFeatures{};// this remains empty, will ad shit like geometry shaders i think
+        VkPhysicalDeviceFeatures deviceFeatures{}; // here i add future shit i might need 
+        deviceFeatures.samplerAnisotropy = VK_TRUE;
 
 
         VkDeviceCreateInfo createInfo{};
@@ -528,29 +536,9 @@ private:
     void createImageViews() {
         swapChainImageViews.resize(swapChainImages.size());
 
-        for (size_t i = 0; i < swapChainImages.size(); i++) {
-            VkImageViewCreateInfo createInfo{};
-            createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-            createInfo.image = swapChainImages[i];
-            createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            createInfo.format = swapChainImageFormat;
-
-            createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-            createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-            createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-            createInfo.subresourceRange.baseMipLevel = 0;
-            createInfo.subresourceRange.levelCount = 1;
-            createInfo.subresourceRange.baseArrayLayer = 0;
-            createInfo.subresourceRange.layerCount = 1;
-
-            if (vkCreateImageView(device, &createInfo, nullptr, &swapChainImageViews[i]) != VK_SUCCESS) {
-                throw std::runtime_error("failed to create image views!");
-            }
+        for (uint32_t i = 0; i < swapChainImages.size(); i++) {
+            swapChainImageViews[i] = createImageView(swapChainImages[i], swapChainImageFormat);
         }
-
     }
 
 
@@ -1070,6 +1058,7 @@ private:
     void createTextureImage() {
         int texWidth, texHeight, texChannels;
         stbi_uc* pixels = stbi_load("C:/lolo/dev/Physics-Graphics-engine/src/textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        // TODO : make this a relative path ^^^^^^
         VkDeviceSize imageSize = texWidth * texHeight * 4;
 
         if (!pixels) { // if this fails its likely the image path
@@ -1181,6 +1170,47 @@ private:
         endSingleTimeCommands(commandBuffer);
     }
 
+
+    void createTextureImageView() {
+        textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_SRGB);
+    }
+
+    void createTextureSampler() {
+
+        VkPhysicalDeviceProperties properties{};
+        vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+
+        printf("Max anisotropy value: %.1f\n", properties.limits.maxSamplerAnisotropy);
+
+
+        VkSamplerCreateInfo samplerInfo{};
+        samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerInfo.magFilter = VK_FILTER_LINEAR;
+        samplerInfo.minFilter = VK_FILTER_LINEAR;
+        samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+
+        samplerInfo.anisotropyEnable = VK_TRUE;
+        samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
+
+        samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+
+        samplerInfo.unnormalizedCoordinates = VK_FALSE;
+
+        samplerInfo.compareEnable = VK_FALSE;
+        samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+        samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        samplerInfo.mipLodBias = 0.0f;
+        samplerInfo.minLod = 0.0f;
+        samplerInfo.maxLod = 0.0f;
+
+        if (vkCreateSampler(device, &samplerInfo, nullptr, &textureSampler) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create texture sampler!");
+        }
+    }
+
+    //litle helpers
     void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height) {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
@@ -1205,7 +1235,6 @@ private:
     }
 
 
-    //litle helpers
     VkCommandBuffer beginSingleTimeCommands() {
         VkCommandBufferAllocateInfo allocInfo{};
         allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -1239,7 +1268,25 @@ private:
         vkFreeCommandBuffers(device, commandPool, 1, &commandBuffer);
     }
 
+    VkImageView createImageView(VkImage image, VkFormat format) {
+        VkImageViewCreateInfo viewInfo{};
+        viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewInfo.image = image;
+        viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.format = format;
+        viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewInfo.subresourceRange.baseMipLevel = 0;
+        viewInfo.subresourceRange.levelCount = 1;
+        viewInfo.subresourceRange.baseArrayLayer = 0;
+        viewInfo.subresourceRange.layerCount = 1;
 
+        VkImageView imageView;
+        if (vkCreateImageView(device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create image view!");
+        }
+
+        return imageView;
+    }
 
 /// Main Loop ///
     void mainLoop() {
@@ -1384,6 +1431,9 @@ private:
         printf("Closing...\n");
 
         cleanupSwapChain();
+
+        vkDestroySampler(device, textureSampler, nullptr);
+        vkDestroyImageView(device, textureImageView, nullptr);
 
         vkDestroyImage(device, textureImage, nullptr);
         vkFreeMemory(device, textureImageMemory, nullptr);
