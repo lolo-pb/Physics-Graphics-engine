@@ -17,3 +17,5 @@ double click on file explorer: :T
 ## WHAAT!??!!
 <img width="801" height="585" alt="image" src="https://github.com/user-attachments/assets/72b71aa5-206d-4c84-ad63-1cc69965e7ce" />
 
+## Amazing
+<img width="790" height="594" alt="image" src="https://github.com/user-attachments/assets/3f97a3d5-b911-448f-a448-c256529f29f0" />
