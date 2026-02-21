@@ -7,6 +7,11 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
 
+#include <unordered_map>
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -26,9 +31,11 @@
 
 
 // TODO : make these relative
-const std::string MODEL_PATH = "C:/lolo/dev/Physics-Graphics-engine/src/models/viking_room.obj";
-const std::string TEXTURE_PATH = "C:/lolo/dev/Physics-Graphics-engine/src/textures/viking_room.png";
+//const std::string MODEL_PATH = "C:/lolo/dev/Physics-Graphics-engine/src/models/viking_room.obj";
+//const std::string TEXTURE_PATH = "C:/lolo/dev/Physics-Graphics-engine/src/textures/viking_room.png";
 //const std::string MODEL_PATH = "C:/lolo/dev/Physics-Graphics-engine/src/textures/texture.jpg";
+const std::string MODEL_PATH = "C:/lolo/dev/Physics-Graphics-engine/src/models/bobo_neca.obj";
+const std::string TEXTURE_PATH = "C:/lolo/dev/Physics-Graphics-engine/src/textures/boboneca.png";
 
 
 const uint32_t WINDOW_WIDTH = 800;
@@ -89,7 +96,22 @@ struct Vertex {
 
         return attributeDescriptions;
     }
+
+    bool operator==(const Vertex& other) const {
+        return pos == other.pos && color == other.color && texCoord == other.texCoord;
+    }
 };
+
+namespace std {
+    template<> struct hash<Vertex> {
+        size_t operator()(Vertex const& vertex) const {
+            return ((hash<glm::vec3>()(vertex.pos) ^
+                (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
+                (hash<glm::vec2>()(vertex.texCoord) << 1);
+        }
+    };
+}
+
 
 struct UniformBufferObject {
     glm::mat4 model;
@@ -1390,6 +1412,8 @@ private:
             throw std::runtime_error(warn + err);
         }
 
+        std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+
         for (const auto& shape : shapes) {
             for (const auto& index : shape.mesh.indices) {
                 Vertex vertex{};
@@ -1407,8 +1431,12 @@ private:
 
                 vertex.color = { 1.0f, 1.0f, 1.0f };
 
-                vertices.push_back(vertex);
-                indices.push_back(indices.size());
+                if (uniqueVertices.count(vertex) == 0) {
+                    uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+                    vertices.push_back(vertex);
+                }
+
+                indices.push_back(uniqueVertices[vertex]);
             }
         }
     }
@@ -1530,6 +1558,9 @@ private:
         createFramebuffers();
     }
 
+    const float CAMERA_DISTANCE = 3.0f;
+    const float CAMERA_CUTOFF = 10.0f;
+
     void updateUniformBuffer(uint32_t currentImage) {
         static auto startTime = std::chrono::high_resolution_clock::now();
 
@@ -1540,13 +1571,13 @@ private:
 
         // es lo que se aplica para rotar alrededor del objeto, 
         // esto noc q es, es la identidad-VVVV         VVV-esto va aumentando con el tiempo        VVV-esto es el eje de rot
-        ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(90.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.model = glm::rotate(glm::mat4(1.0f), time * glm::radians(40.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 
         // info de la camara
-        ubo.view = glm::lookAt(glm::vec3(2.0f, 2.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        ubo.view = glm::lookAt(glm::vec3(CAMERA_DISTANCE, CAMERA_DISTANCE, CAMERA_DISTANCE), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 
         //                                    fov VVV       VVV    todo esto es el aspect ratio de la ventana VVV
-        ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, 10.0f);
+        ubo.proj = glm::perspective(glm::radians(45.0f), swapChainExtent.width / (float)swapChainExtent.height, 0.1f, CAMERA_CUTOFF);
 
         ubo.proj[1][1] *= -1;// invertir el eje y de la ventana, pq vulkan esta al revez
 
