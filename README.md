@@ -20,3 +20,6 @@ double click on file explorer: :T
 ## Amazing
 #### Depth buffering and textures
 <img width="790" height="594" alt="image" src="https://github.com/user-attachments/assets/3f97a3d5-b911-448f-a448-c256529f29f0" />
+
+## Baffling
+<img width="837" height="660" alt="image" src="https://github.com/user-attachments/assets/eb3b2dc4-efdc-4aef-9b04-f8621e2df225" />
