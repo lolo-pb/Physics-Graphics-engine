@@ -4,6 +4,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
+
 #define GLM_FORCE_RADIANS
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
@@ -20,6 +23,13 @@
 #include <algorithm> 
 #include <fstream>
 #include <array>
+
+
+// TODO : make these relative
+const std::string MODEL_PATH = "C:/lolo/dev/Physics-Graphics-engine/src/models/viking_room.obj";
+const std::string TEXTURE_PATH = "C:/lolo/dev/Physics-Graphics-engine/src/textures/viking_room.png";
+//const std::string MODEL_PATH = "C:/lolo/dev/Physics-Graphics-engine/src/textures/texture.jpg";
+
 
 const uint32_t WINDOW_WIDTH = 800;
 const uint32_t WINDOW_HEIGHT = 600;
@@ -87,24 +97,6 @@ struct UniformBufferObject {
     glm::mat4 proj;
 };
 
-// temporary data {
-const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{ 0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{ 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f,  0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{ 0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{ 0.5f,  0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f,  0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-
-const std::vector<uint16_t> indices = {
-    0, 1, 2, 2, 3, 0,
-    4, 5, 6, 6, 7, 4
-};
-
 
 
 class HelloTriangleApplication {
@@ -144,16 +136,10 @@ private:
     VkPipeline graphicsPipeline = nullptr;
 
     VkCommandPool commandPool = nullptr;
-    //VkCommandBuffer commandBuffer = nullptr;
     std::vector<VkCommandBuffer> commandBuffers;
 
     VkDescriptorPool descriptorPool = nullptr;
     std::vector<VkDescriptorSet> descriptorSets;
-
-    // Sync
-    //VkSemaphore imageAvailableSemaphore = nullptr;  // estos estan ahi abajo pero vectores
-    //VkSemaphore renderFinishedSemaphore = nullptr;
-    //VkFence inFlightFence = nullptr;
 
     std::vector<VkSemaphore> imageAvailableSemaphores;
     std::vector<VkSemaphore> renderFinishedSemaphores;
@@ -164,6 +150,9 @@ private:
     uint32_t currentFrame = 0;
 
     //buffers
+        //model
+    std::vector<Vertex> vertices;
+    std::vector<uint32_t> indices;
 
     VkBuffer vertexBuffer = nullptr;
     VkDeviceMemory vertexBufferMemory = nullptr;
@@ -230,6 +219,7 @@ private:
         createTextureImageView();
         createTextureSampler();
 
+        loadModel();
         createVertexBuffer();
         createIndexBuffer();
         createUniformBuffers();
@@ -882,7 +872,7 @@ private:
         VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
 
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT16); // aca esta el type de los indexes del index 
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer, 0, VK_INDEX_TYPE_UINT32); // aca esta el type de los indexes del index 
 
         vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, nullptr);
 
@@ -1159,8 +1149,7 @@ private:
 
     void createTextureImage() {
         int texWidth, texHeight, texChannels;
-        stbi_uc* pixels = stbi_load("C:/lolo/dev/Physics-Graphics-engine/src/textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
-        // TODO : make this a relative path ^^^^^^
+        stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         VkDeviceSize imageSize = texWidth * texHeight * 4;
 
         if (!pixels) { // if this fails its likely the image path
@@ -1388,6 +1377,40 @@ private:
         }
 
         return imageView;
+    }
+
+/// Model loading
+    void loadModel() {
+        tinyobj::attrib_t attrib;
+        std::vector<tinyobj::shape_t> shapes;
+        std::vector<tinyobj::material_t> materials;
+        std::string warn, err;
+
+        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) {
+            throw std::runtime_error(warn + err);
+        }
+
+        for (const auto& shape : shapes) {
+            for (const auto& index : shape.mesh.indices) {
+                Vertex vertex{};
+
+                vertex.pos = {
+                    attrib.vertices[3 * index.vertex_index + 0],
+                    attrib.vertices[3 * index.vertex_index + 1],
+                    attrib.vertices[3 * index.vertex_index + 2]
+                };
+
+                vertex.texCoord = {
+                    attrib.texcoords[2 * index.texcoord_index + 0],
+                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+                };
+
+                vertex.color = { 1.0f, 1.0f, 1.0f };
+
+                vertices.push_back(vertex);
+                indices.push_back(indices.size());
+            }
+        }
     }
 
 /// Main Loop ///
